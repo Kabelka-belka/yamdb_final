@@ -23,11 +23,11 @@ pip install -r requirements.txt
 ### Переходим в папку с файлом docker-compose.yaml:
 cd infra
 
-### Поднимаем контейнеры (infra_db, infra_web, infra_nginx):
+### Поднимаем контейнеры (db, infra_web-1, infra_nginx-1):
 docker-compose up -d --build
 
 ### Выполняем миграции:
-docker-compose exec web python manage.py makemigrations reviews
+docker-compose exec web python manage.py makemigrations
 
 docker-compose exec web python manage.py migrate
 

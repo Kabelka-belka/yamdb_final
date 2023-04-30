@@ -1,17 +1,3 @@
-from django.core.mail import send_mail
-from django.db.models import Avg
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, status, viewsets
-from rest_framework.authtoken.models import Token
-from rest_framework.decorators import api_view, action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from reviews.models import Category, Genre, Review, Title
-from users.models import User
-from api_yamdb.settings import ADMIN_EMAIL
-
 from api.v1.filters import TitleFilter
 from api.v1.permissions import (IsAdminOrAlloWGetOnlyPermission,
                                 IsAdminOrSuperPermission,
@@ -21,6 +7,20 @@ from api.v1.serializers import (CategoriesSerializer, CommentSerializer,
                                 RecordTitlesSerializer, ReviewSerializer,
                                 SignUpConfirmationSerializer, SignUpSerializer,
                                 UserSerializer)
+from django.core.mail import send_mail
+from django.db.models import Avg
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.authtoken.models import Token
+from rest_framework.decorators import action, api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from reviews.models import Category, Genre, Review, Title
+from users.models import User
+
+from api_yamdb.settings import ADMIN_EMAIL
 
 
 class CreateListDestroyViewset(

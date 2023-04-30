@@ -1,8 +1,7 @@
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from users.models import User
-
 from reviews.validate import yearvalidate
+from users.models import User
 
 STR_TEXT_LENGTH = 15
 
