@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
     steps:
-      - name: Connects to VPS via SSH
+      - name: Deploy
         uses: appleboy/ssh-action@v0.1.4
         with:
           host: ${{ secrets.HOST }}
