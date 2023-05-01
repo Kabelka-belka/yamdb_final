@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY /api_yamdb /app
 
-RUN pip install -r requirements.txt --no-cache-dir
+RUN pip install -r /app/requirements.txt --no-cache-dir
 
 COPY ./ .
 
