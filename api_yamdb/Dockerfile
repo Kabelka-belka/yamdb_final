@@ -5,7 +5,7 @@ WORKDIR /app/api_yamdb/
 
 COPY ./ /app
 
-RUN pip3 install -r /app/requirements.txt --no-cache-dir
+RUN pip3 install -r /yamdb_final/api_yamdb/requirements.txt --no-cache-dir
 
 # ENV PIP_ROOT_USER_ACTION=ignore
 
