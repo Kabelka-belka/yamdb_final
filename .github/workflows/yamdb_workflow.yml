@@ -43,7 +43,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: belka1/yamdb_final:latest
+          file: api_yamdb/Dockerfile
+          tags: belka1/api_yamdb:latest
   deploy:
     runs-on: ubuntu-latest
     needs: build_and_push_to_docker_hub
