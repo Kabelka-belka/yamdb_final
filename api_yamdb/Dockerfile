@@ -1,16 +1,13 @@
 
 FROM python:3.7-slim
 
-WORKDIR /app/api_yamdb/
+WORKDIR /app
 
-COPY requirements.txt .
-
-RUN pip3 install --upgrade pip  --no-cache-dir
-
+COPY /api_yamdb /app
 
 RUN pip install -r /app/equirements.txt --no-cache-dir
 
-COPY . .
+COPY ./ .
 
 # ENV PIP_ROOT_USER_ACTION=ignore
 
