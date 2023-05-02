@@ -57,7 +57,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            sudo docker pull belka1/api_yamdb
+            sudo docker pull belka1/yamdb_final:latest
             sudo docker stop
             sudo docker rm web
             touch .env
