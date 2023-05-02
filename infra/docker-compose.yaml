@@ -9,7 +9,7 @@ services:
     env_file:
       - ./.env
   web:
-    build: .
+    image: belka1/yamdb_final
     restart: always
     volumes:
       - static_value:/app/static/
