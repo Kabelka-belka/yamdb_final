@@ -3,7 +3,7 @@ FROM python:3.7-slim
 
 WORKDIR /app
 
-COPY requirements.txt /app
+COPY api_yamdb/requirements.txt /app
 
 RUN pip install -r requirements.txt --no-cache-dir
 
