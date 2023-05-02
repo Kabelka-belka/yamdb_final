@@ -57,9 +57,9 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            sudo docker-compose pull belka1/api_yamdb:latest
-            sudo docker-compose stop
-            sudo docker-compose rm web
+            sudo docker pull belka1/api_yamdb
+            sudo docker stop $(sudo docker ps -a -q)
+            sudo docker rm web
             touch .env
             echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
             echo DB_NAME=${{ secrets.DB_NAME }} >> .env
