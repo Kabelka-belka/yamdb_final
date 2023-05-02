@@ -58,7 +58,7 @@ jobs:
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
             sudo docker pull belka1/api_yamdb
-            sudo docker stop $(sudo docker ps -a -q)
+            sudo docker stop
             sudo docker rm web
             touch .env
             echo DB_ENGINE=${{ secrets.DB_ENGINE }} >> .env
