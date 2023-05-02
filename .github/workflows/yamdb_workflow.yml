@@ -57,7 +57,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            sudo  /home/kabelka-final/yamdb_finaldocker-compose pull belka1/api_yamdb:latest
+            sudo  /home/kabelka-final/yamdb_final/infra/docker-compose pull belka1/api_yamdb:latest
             sudo docker-compose stop
             sudo docker-compose rm web
             touch .env
