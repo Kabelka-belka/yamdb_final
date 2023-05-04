@@ -3,39 +3,47 @@
 #  Автор
 Кабелка Анна
 
+## Проект доступен по адресу: 
+
+http://localhost:8080
+
+## Шаблон .env:
+
++  указываем, с какой БД работаем
+DB_ENGINE=django.db.backends.postgresql
++  имя базы данных
+DB_NAME=
++ логин для подключения к базе данных
+POSTGRES_USER=
++  пароль для подключения к БД (установите свой)
+POSTGRES_PASSWORD=
++ название сервиса (контейнера)
+DB_HOST=
++ порт для подключения к БД
+DB_PORT=
+SECRET_KEY=<секретный ключ проекта django> 
+
 ## Как запустить проект:
 ______
-### Клонируем репозиторий и переходим в него:
-git clone git@github.com:Kabelka-belka/
-yamdb_final.git   
-cd infra_sp2   
-cd api_yamdb
 
-### Создаем и активируем виртуальное окружение:
+Для запуска проекта в контейнерах используем docker-compose : docker-compose up -d --build, находясь в директории с docker-compose.yaml
 
-python3 -m venv venv   
-source /venv/bin/activate    
-python -m pip install --upgrade pip
+## После сборки :
 
-### Ставим зависимости из requirements.txt:
-pip install -r requirements.txt
-
-### Переходим в папку с файлом docker-compose.yaml:
-cd infra
-
-### Поднимаем контейнеры (db, infra_web-1, infra_nginx-1):
-docker-compose up -d --build
-
-### Выполняем миграции:
-docker-compose exec web python manage.py makemigrations
-
++ Выполняем миграции
 docker-compose exec web python manage.py migrate
-
-### Создаем суперпользователя:
++ Создаем суперппользователя
 docker-compose exec web python manage.py createsuperuser
-
-### Собираем статику:
++ Собираем статику со всего проекта
 docker-compose exec web python manage.py collectstatic --no-input
++ Для дампа данных из БД
+docker-compose exec web python manage.py dumpdata > dump.json
 
-### Останавливаем контейнеры:
+___
+
+Пройдите по адресу http://localhost:8080/admin/ , авторизуйтесь как созданный выше суперпользователь, и внесите записи в базу данных через админ панель.
+___
+
+
+### Останавливить контейнеры:
 docker-compose down -v
