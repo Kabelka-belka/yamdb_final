@@ -5,14 +5,14 @@
 
 ## Проект доступен по адресу: 
 
-http://localhost:8080
+https://kabelka-belka.github.io/yamdb_final/
 
 ## Шаблон .env:
 
 +  указываем, с какой БД работаем
 DB_ENGINE=django.db.backends.postgresql
 +  имя базы данных
-DB_NAME=
+DB_NAME
 + логин для подключения к базе данных
 POSTGRES_USER=
 +  пароль для подключения к БД (установите свой)
