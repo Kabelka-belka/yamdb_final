@@ -66,16 +66,15 @@ WSGI_APPLICATION = 'api_yamdb.wsgi.application'
 
 
 # Database
-
 DATABASES = {
     'default': {
         'ENGINE': os.getenv(
             'DB_ENGINE', default='django.db.backends.postgresql'),
-        'NAME': os.getenv('DB_NAME', default='yamdb_final'),
+        'NAME': os.getenv('DB_NAME', default='postgres'),
         'USER': os.getenv('POSTGRES_USER', default='postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='password'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', default='postgres'),
         'HOST': os.getenv('DB_HOST', default='db'),
-        'PORT': os.getenv('DB_PORT', default='5432')
+        'PORT': os.getenv('DB_PORT', default=5432)
     }
 }
 
@@ -142,3 +141,4 @@ ADMIN_EMAIL = 'no-reply@yamdb.com'
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
