@@ -1,5 +1,7 @@
 version: '3,3'
+
 services:
+
   db:
     image: postgres:13.0-alpine
     container_name: db
@@ -7,6 +9,7 @@ services:
       - db_data:/var/lib/postgresql/data/
     env_file:
       - ./.env
+
   web:
     image: belka1/api_yamdb:latest
     restart: always
