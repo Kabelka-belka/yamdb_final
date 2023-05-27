@@ -147,7 +147,7 @@ dmypy.json
 .mypy_cache
 
 # папки со статикой и медиа
-static/admin/
-static/rest_framework/
+static/admin
+static/rest_framework
 media/
 
