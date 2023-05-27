@@ -35,7 +35,7 @@ docker-compose exec web python manage.py migrate
 + Создаем суперппользователя
 docker-compose exec web python manage.py createsuperuser
 + Собираем статику со всего проекта
-docker-compose exec web python manage.py collectstatic --no-input
+docker-compose exec web python manage.py --no-input
 + Для дампа данных из БД
 docker-compose exec web python manage.py dumpdata > dump.json
 
@@ -50,3 +50,5 @@ docker-compose down -v
 
 ##  Развернутый проект:
 http://158.160.38.191/api/v1/
+http://127.0.0.1:8000/redoc/
+http://127.0.0.1:8000/api/v1/
