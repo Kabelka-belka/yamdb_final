@@ -32,6 +32,10 @@ services:
 
       - media_value:/app/media/
 
+      - ./static/redoc.yaml:/app/static/redoc.yaml
+
+      - ./templates/redoc.html:/app/templates/redoc.html
+
     depends_on:
       - web
 
