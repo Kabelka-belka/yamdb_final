@@ -1,1247 +1,1202 @@
 openapi: 3.0.2
 info:
-  title: 'YaMDb API'
+  title: ''
   version: ''
-  description: |
-    запросы к API начинаются с `/api/v1/`
-
-    # Описание
-    Проект **YaMDb** собирает отзывы пользователей на различные произведения.
-
-    # Алгоритм регистрации пользователей
-    1. Пользователь отправляет POST-запрос на добавление нового пользователя с параметрами `email` и `username` на эндпоинт `/api/v1/auth/signup/`.
-    2. **YaMDB** отправляет письмо с кодом подтверждения (`confirmation_code`) на адрес  `email`.
-    3. Пользователь отправляет POST-запрос с параметрами `username` и `confirmation_code` на эндпоинт `/api/v1/auth/token/`, в ответе на запрос ему приходит `token` (JWT-токен).
-    4. При желании пользователь отправляет PATCH-запрос на эндпоинт `/api/v1/users/me/` и заполняет поля в своём профайле (описание полей — в документации).
-
-    # Пользовательские роли
-    - **Аноним** — может просматривать описания произведений, читать отзывы и комментарии.
-    - **Аутентифицированный пользователь** (`user`) — может, как и **Аноним**, читать всё, дополнительно он может публиковать отзывы и ставить оценку произведениям (фильмам/книгам/песенкам), может комментировать чужие отзывы; может редактировать и удалять **свои** отзывы и комментарии. Эта роль присваивается по умолчанию каждому новому пользователю.
-    - **Модератор** (`moderator`) — те же права, что и у **Аутентифицированного пользователя** плюс право удалять **любые** отзывы и комментарии.
-    - **Администратор** (`admin`) — полные права на управление всем контентом проекта. Может создавать и удалять произведения, категории и жанры. Может назначать роли пользователям. 
-    - **Суперюзер Django** — обладет правами администратора (`admin`)
-
-
-servers:
-  - url: /api/v1/
-
-tags:
-  - name: AUTH
-    description: Регистрация пользователей и выдача токенов
-  - name: CATEGORIES
-    description: Категории (типы) произведений
-  - name: GENRES
-    description: Категории жанров
-  - name: TITLES
-    description: Произведения, к которым пишут отзывы (определённый фильм, книга или песенка).
-  - name: REVIEWS
-    description: Отзывы
-  - name: COMMENTS
-    description: Комментарии к отзывам
-  - name: USERS
-    description: Пользователи
-
 paths:
-  /auth/signup/:
-    post:
-      tags:
-        - AUTH
-      operationId: Регистрация нового пользователя
-      description: |
-        Получить код подтверждения на переданный `email`.
-
-        Права доступа: **Доступно без токена.**
-
-        Использовать имя 'me' в качестве `username` запрещено.
-
-        Поля `email` и `username` должны быть уникальными.
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              required:
-                - email
-                - username
-              properties:
-                email:
-                  type: string
-                username:
-                  type: string
+  /api/v1/users/:
+    get:
+      operationId: listUsers
+      description: ''
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
       responses:
-        200:
+        '200':
           content:
             application/json:
               schema:
+                type: object
                 properties:
-                  email:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
                     type: string
-                  username:
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
                     type: string
-                required:
-                - email
-                - username
-          description: 'Удачное выполнение запроса'
-        '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-          description: 'Отсутствует обязательное поле или оно некорректно'
-  /auth/token/:
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+          description: ''
+      tags:
+      - api
     post:
-      tags:
-        - AUTH
-      operationId: Получение JWT-токена
-      description: |
-        Получение JWT-токена в обмен на username и confirmation code.
-
-        Права доступа: **Доступно без токена.**
-      requestBody:
-        content:
-          application/json:
-            schema:
-              required:
-                - username
-                - confirmation_code
-              properties:
-                username:
-                  type: string
-                confirmation_code:
-                  type: string
-                  writeOnly: true
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Token'
-          description: 'Удачное выполнение запроса'
-        400:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-          description: 'Отсутствует обязательное поле или оно некорректно'
-        404:
-          description: Пользователь не найден
-
-  /categories/:
-    get:
-      tags:
-        - CATEGORIES
-      operationId: Получение списка всех категорий
-      description: |
-        Получить список всех категорий
-
-        Права доступа: **Доступно без токена**
-      parameters:
-      - name: search
-        in: query
-        description: Поиск по названию категории
-        schema:
-          type: string
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Category'
-    post:
-      tags:
-        - CATEGORIES
-      operationId: Добавление новой категории
-      description: |
-        Создать категорию.
-
-        Права доступа: **Администратор.**
-
-        Поле `slug` каждой категории должно быть уникальным.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Category'
-      responses:
-        201:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Category'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-      security:
-      - jwt-token:
-        - write:admin
-  /categories/{slug}/:
-    delete:
-      tags:
-        - CATEGORIES
-      operationId: Удаление категории
-      description: |
-        Удалить категорию.
-
-        Права доступа: **Администратор.**
-      parameters:
-      - name: slug
-        in: path
-        required: true
-        description: Slug категории
-        schema:
-          type: string
-      responses:
-        204:
-          description: 'Удачное выполнение запроса'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Категория не найдена
-      security:
-      - jwt-token:
-        - write:admin
-
-  /genres/:
-    get:
-      tags:
-        - GENRES
-      operationId: Получение списка всех жанров
-      description: |
-        Получить список всех жанров.
-
-        Права доступа: **Доступно без токена**
-      parameters:
-      - name: search
-        in: query
-        description: Поиск по названию жанра
-        schema:
-          type: string
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Genre'
-    post:
-      tags:
-        - GENRES
-      operationId: Добавление жанра
-      description: |
-        Добавить жанр.
-
-        Права доступа: **Администратор**.
-
-        Поле `slug` каждого жанра должно быть уникальным.
-      responses:
-        201:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Genre'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-      security:
-      - jwt-token:
-        - write:admin
-
-  /genres/{slug}/:
-    delete:
-      tags:
-        - GENRES
-      operationId: Удаление жанра
-      description: |
-        Удалить жанр.
-
-        Права доступа: **Администратор**.
-      parameters:
-      - name: slug
-        in: path
-        required: true
-        description: Slug жанра
-        schema:
-          type: string
-      responses:
-        204:
-          description: 'Удачное выполнение запроса'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Жанр не найден
-      security:
-      - jwt-token:
-        - write:admin
-
-  /titles/:
-    get:
-      tags:
-        - TITLES
-      operationId: Получение списка всех произведений
-      description: |
-        Получить список всех объектов.
-
-        Права доступа: **Доступно без токена**
-      parameters:
-        - name: category
-          in: query
-          description: фильтрует по полю slug категории
-          schema:
-            type: string
-        - name: genre
-          in: query
-          description: фильтрует по полю slug жанра
-          schema:
-            type: string
-        - name: name
-          in: query
-          description: фильтрует по названию произведения
-          schema:
-            type: string
-        - name: year
-          in: query
-          description: фильтрует по году
-          schema:
-            type: integer
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Title'
-    post:
-      tags:
-        - TITLES
-      operationId: Добавление произведения
-      description: |
-        Добавить новое произведение.
-
-        Права доступа: **Администратор**.
-
-        Нельзя добавлять произведения, которые еще не вышли (год выпуска не может быть больше текущего).
-
-        При добавлении нового произведения требуется указать уже существующие категорию и жанр.
+      operationId: createUser
+      description: ''
       parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TitleCreate'
-      responses:
-        201:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Title'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-      security:
-      - jwt-token:
-        - write:admin
-  /titles/{titles_id}/:
-    parameters:
-      - name: titles_id
-        in: path
-        required: true
-        description: ID объекта
-        schema:
-          type: integer
-    get:
-      tags:
-        - TITLES
-      operationId: Получение информации о произведении
-      description: |
-        Информация о произведении
-
-
-        Права доступа: **Доступно без токена**
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Title'
-        404:
-          description: Объект не найден
-    patch:
-      tags:
-        - TITLES
-      operationId: Частичное обновление информации о произведении
-      description: |
-        Обновить информацию о произведении
-
-
-        Права доступа: **Администратор**
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TitleCreate'
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Title'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Объект не найден
-      security:
-      - jwt-token:
-        - write:admin
-    delete:
-      tags:
-        - TITLES
-      operationId: Удаление произведения
-      description: |
-        Удалить произведение.
-
-        Права доступа: **Администратор**.
-      responses:
-        204:
-          description: 'Удачное выполнение запроса'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Произведение не найдено
-      security:
-      - jwt-token:
-        - write:admin
-
-  /titles/{title_id}/reviews/:
-    parameters:
-      - name: title_id
-        in: path
-        required: true
-        description: ID произведения
-        schema:
-          type: integer
-    get:
-      tags:
-        - REVIEWS
-      operationId: Получение списка всех отзывов
-      description: |
-        Получить список всех отзывов.
-
-        Права доступа: **Доступно без токена**.
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Review'
-        404:
-          description: Произведение не найдено
-    post:
-      tags:
-        - REVIEWS
-      operationId: Добавление нового отзыва
-      description: |
-        Добавить новый отзыв. Пользователь может оставить только один отзыв на произведение.
-
-        Права доступа: **Аутентифицированные пользователи.**
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Review'
-      responses:
-        201:
-          description: 'Удачное выполнение запроса'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        404:
-          description: Произведение не найдено
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-  /titles/{title_id}/reviews/{review_id}/:
-    parameters:
-      - name: title_id
-        in: path
-        required: true
-        description: ID произведения
-        schema:
-          type: integer
-      - name: review_id
-        in: path
-        required: true
-        description: ID отзыва
-        schema:
-          type: integer
-    get:
-      tags:
-        - REVIEWS
-      operationId: Полуение отзыва по id
-      description: |
-        Получить отзыв по id для указанного произведения.
-
-        Права доступа: **Доступно без токена.**
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-        404:
-          description: Произведение или отзыв не найден
-    patch:
-      tags:
-        - REVIEWS
-      operationId: Частичное обновление отзыва по id
-      description: |
-        Частично обновить отзыв по id.
-
-        Права доступа: **Автор отзыва, модератор или администратор.**
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Review'
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Произведение не найдено
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-    delete:
-      tags:
-        - REVIEWS
-      operationId: Удаление отзыва по id
-      description: |
-        Удалить отзыв по id
-
-        Права доступа: **Автор отзыва, модератор или администратор.**
-      responses:
-        204:
-          description: 'Удачное выполнение запроса'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Произведение или отзыв не найдены
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-
-  /titles/{title_id}/reviews/{review_id}/comments/:
-    parameters:
-      - name: title_id
-        in: path
-        required: true
-        description: ID произведения
-        schema:
-          type: integer
-      - name: review_id
-        in: path
-        required: true
-        description: ID отзыва
-        schema:
-          type: integer
-    get:
-      tags:
-        - COMMENTS
-      operationId: Получение списка всех комментариев к отзыву
-      description: |
-        Получить список всех комментариев к отзыву по id
-
-        Права доступа: **Доступно без токена.**
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/Comment'
-        404:
-          description: Не найдено произведение или отзыв
-    post:
-      tags:
-        - COMMENTS
-      operationId: Добавление комментария к отзыву
-      description: |
-        Добавить новый комментарий для отзыва.
-
-        Права доступа: **Аутентифицированные пользователи.**
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
-      responses:
-        201:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
-          description: 'Удачное выполнение запроса'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        404:
-          description: Не найдено произведение или отзыв
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-
-  /titles/{title_id}/reviews/{review_id}/comments/{comment_id}/:
-    parameters:
-      - name: title_id
-        in: path
-        required: true
-        description: ID произведения
-        schema:
-          type: integer
-      - name: review_id
-        in: path
-        required: true
-        description: ID отзыва
-        schema:
-          type: integer
-      - name: comment_id
-        in: path
-        required: true
-        description: ID комментария
-        schema:
-          type: integer
-    get:
-      tags:
-        - COMMENTS
-      operationId: Получение комментария к отзыву
-      description: |
-        Получить комментарий для отзыва по id.
-
-        Права доступа: **Доступно без токена.**
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
-          description: 'Удачное выполнение запроса'
-        404:
-          description: Не найдено произведение, отзыв или комментарий
-    patch:
-      tags:
-        - COMMENTS
-      operationId: Частичное обновление комментария к отзыву
-      description: |
-        Частично обновить комментарий к отзыву по id.
-
-        Права доступа: **Автор комментария, модератор или администратор**.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
-      responses:
-        200:
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
-          description: 'Удачное выполнение запроса'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Не найдено произведение, отзыв или комментарий
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-    delete:
-      tags:
-        - COMMENTS
-      operationId: Удаление комментария к отзыву
-      description: |
-        Удалить комментарий к отзыву по id.
-
-        Права доступа: **Автор комментария, модератор или администратор**.
-      responses:
-        204:
-          description: 'Удачное выполнение запроса'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Не найдено произведение, отзыв или комментарий
-      security:
-      - jwt-token:
-        - write:user,moderator,admin
-
-  /users/:
-    get:
-      tags:
-        - USERS
-      operationId: Получение списка всех пользователей
-      description: |
-        Получить список всех пользователей.
-
-        Права доступа: **Администратор**
-      parameters:
-      - name: search
-        in: query
-        description: Поиск по имени пользователя (username)
-        schema:
-          type: string
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    count:
-                      type: integer
-                    next:
-                      type: string
-                    previous:
-                      type: string
-                    results:
-                      type: array
-                      items:
-                        $ref: '#/components/schemas/User'
-        401:
-          description: Необходим JWT-токен
-      security:
-      - jwt-token:
-        - read:admin
-    post:
-      tags:
-        - USERS
-      operationId: Добавление пользователя
-      description: |
-        Добавить нового пользователя.
-
-        Права доступа: **Администратор**
-
-        Поля `email` и `username` должны быть уникальными.
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
       responses:
-        201:
-          description: Удачное выполнение запроса
+        '201':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
+          description: ''
+      tags:
+      - api
+  /api/v1/users/me/:
+    get:
+      operationId: meUser
+      description: ''
+      parameters: []
+      responses:
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-      security:
-      - jwt-token:
-        - write:admin
-  /users/{username}/:
-    parameters:
+                $ref: '#/components/schemas/User'
+          description: ''
+      tags:
+      - api
+    patch:
+      operationId: meUser
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+      tags:
+      - api
+  /api/v1/users/{username}/:
+    get:
+      operationId: retrieveUser
+      description: ''
+      parameters:
       - name: username
         in: path
         required: true
-        description: Username пользователя
+        description: "\u0418\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\
+          \u0430\u0442\u0435\u043B\u044F"
         schema:
           type: string
-    get:
-      tags:
-        - USERS
-      operationId: Получение пользователя по username
-      description: |
-        Получить пользователя по username.
-
-        Права доступа: **Администратор**
       responses:
-        200:
-          description: Удачное выполнение запроса
+        '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Пользователь не найден
-      security:
-      - jwt-token:
-        - read:admin
-    patch:
+          description: ''
       tags:
-        - USERS
-      operationId: Изменение данных пользователя по username
-      description: |
-        Изменить данные пользователя по username.
-
-        Права доступа: **Администратор.**
-
-        Поля `email` и `username` должны быть уникальными.
+      - api
+    put:
+      operationId: updateUser
+      description: ''
+      parameters:
+      - name: username
+        in: path
+        required: true
+        description: "\u0418\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\
+          \u0430\u0442\u0435\u043B\u044F"
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
       responses:
-        200:
-          description: Удачное выполнение запроса
+        '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationError'
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Пользователь не найден
-      security:
-      - jwt-token:
-        - write:admin
-    delete:
+          description: ''
       tags:
-        - USERS
-      operationId: Удаление пользователя по username
-      description: |
-        Удалить пользователя по username.
-
-        Права доступа: **Администратор.**
-      responses:
-        204:
-          description: Удачное выполнение запроса
-        401:
-          description: Необходим JWT-токен
-        403:
-          description: Нет прав доступа
-        404:
-          description: Пользователь не найден
-      security:
-      - jwt-token:
-        - write:admin
-
-  /users/me/:
-    get:
-      tags:
-        - USERS
-      operationId: Получение данных своей учетной записи
-      description: |
-        Получить данные своей учетной записи
-
-        Права доступа: **Любой авторизованный пользователь**
-      responses:
-        200:
-          description: Удачное выполнение запроса
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-      security:
-      - jwt-token:
-        - read:admin,moderator,user
+      - api
     patch:
-      tags:
-        - USERS
-      operationId: Изменение данных своей учетной записи
-      description: |
-        Изменить данные своей учетной записи
-
-        Права доступа: **Любой авторизованный пользователь**
-
-        Поля `email` и `username` должны быть уникальными.
+      operationId: partialUpdateUser
+      description: ''
+      parameters:
+      - name: username
+        in: path
+        required: true
+        description: "\u0418\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\
+          \u0430\u0442\u0435\u043B\u044F"
+        schema:
+          type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Me'
+              $ref: '#/components/schemas/User'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/User'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/User'
       responses:
-        200:
-          description: Удачное выполнение запроса
+        '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-        400:
-          description: 'Отсутствует обязательное поле или оно некорректно'
+          description: ''
+      tags:
+      - api
+    delete:
+      operationId: destroyUser
+      description: ''
+      parameters:
+      - name: username
+        in: path
+        required: true
+        description: "\u0418\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\
+          \u0430\u0442\u0435\u043B\u044F"
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
+  /api/v1/categories/:
+    get:
+      operationId: listCategorys
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438 \u0438\u0437 \u043C\
+        \u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      responses:
+        '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
-      security:
-      - jwt-token:
-        - write:admin,moderator,user
-
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Categories'
+          description: ''
+      tags:
+      - api
+    post:
+      operationId: createCategory
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438 \u0438\u0437 \u043C\
+        \u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Categories'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Categories'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Categories'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Categories'
+          description: ''
+      tags:
+      - api
+  /api/v1/genres/:
+    get:
+      operationId: listGenres
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u0436\u0430\u043D\u0440\u044B \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\
+        \u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Genres'
+          description: ''
+      tags:
+      - api
+    post:
+      operationId: createGenre
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u0436\u0430\u043D\u0440\u044B \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\
+        \u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Genres'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Genres'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Genres'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genres'
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/:
+    get:
+      operationId: listTitles
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: category
+        required: false
+        in: query
+        description: category
+        schema:
+          type: string
+      - name: genre
+        required: false
+        in: query
+        description: genre
+        schema:
+          type: string
+      - name: name
+        required: false
+        in: query
+        description: name
+        schema:
+          type: string
+      - name: year
+        required: false
+        in: query
+        description: year
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ReadTitles'
+          description: ''
+      tags:
+      - api
+    post:
+      operationId: createTitle
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordTitles'
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/{id}/:
+    get:
+      operationId: retrieveTitle
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: "A unique integer value identifying this \u041F\u0440\u043E\u0438\
+          \u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435."
+        schema:
+          type: string
+      - name: category
+        required: false
+        in: query
+        description: category
+        schema:
+          type: string
+      - name: genre
+        required: false
+        in: query
+        description: genre
+        schema:
+          type: string
+      - name: name
+        required: false
+        in: query
+        description: name
+        schema:
+          type: string
+      - name: year
+        required: false
+        in: query
+        description: year
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadTitles'
+          description: ''
+      tags:
+      - api
+    put:
+      operationId: updateTitle
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: "A unique integer value identifying this \u041F\u0440\u043E\u0438\
+          \u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435."
+        schema:
+          type: string
+      - name: category
+        required: false
+        in: query
+        description: category
+        schema:
+          type: string
+      - name: genre
+        required: false
+        in: query
+        description: genre
+        schema:
+          type: string
+      - name: name
+        required: false
+        in: query
+        description: name
+        schema:
+          type: string
+      - name: year
+        required: false
+        in: query
+        description: year
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordTitles'
+          description: ''
+      tags:
+      - api
+    patch:
+      operationId: partialUpdateTitle
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: "A unique integer value identifying this \u041F\u0440\u043E\u0438\
+          \u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435."
+        schema:
+          type: string
+      - name: category
+        required: false
+        in: query
+        description: category
+        schema:
+          type: string
+      - name: genre
+        required: false
+        in: query
+        description: genre
+        schema:
+          type: string
+      - name: name
+        required: false
+        in: query
+        description: name
+        schema:
+          type: string
+      - name: year
+        required: false
+        in: query
+        description: year
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RecordTitles'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordTitles'
+          description: ''
+      tags:
+      - api
+    delete:
+      operationId: destroyTitle
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043F\u0440\u043E\u0438\u0437\u0432\u0435\u0434\u0435\u043D\u0438\u044F\
+        \ \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\
+        \u0443\u043F:"
+      parameters:
+      - name: id
+        in: path
+        required: true
+        description: "A unique integer value identifying this \u041F\u0440\u043E\u0438\
+          \u0437\u0432\u0435\u0434\u0435\u043D\u0438\u0435."
+        schema:
+          type: string
+      - name: category
+        required: false
+        in: query
+        description: category
+        schema:
+          type: string
+      - name: genre
+        required: false
+        in: query
+        description: genre
+        schema:
+          type: string
+      - name: name
+        required: false
+        in: query
+        description: name
+        schema:
+          type: string
+      - name: year
+        required: false
+        in: query
+        description: year
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/{title_id}/reviews/{review_id}/comments/:
+    get:
+      operationId: listComments
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Comment'
+          description: ''
+      tags:
+      - api
+    post:
+      operationId: createComment
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/{title_id}/reviews/{review_id}/comments/{id}/:
+    get:
+      operationId: retrieveComment
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+      tags:
+      - api
+    put:
+      operationId: updateComment
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+      tags:
+      - api
+    patch:
+      operationId: partialUpdateComment
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Comment'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+          description: ''
+      tags:
+      - api
+    delete:
+      operationId: destroyComment
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: review_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/{title_id}/reviews/:
+    get:
+      operationId: listReviews
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 123
+                  next:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=4
+                  previous:
+                    type: string
+                    nullable: true
+                    format: uri
+                    example: http://api.example.org/accounts/?page=2
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+          description: ''
+      tags:
+      - api
+    post:
+      operationId: createReview
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Review'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+      tags:
+      - api
+  /api/v1/titles/{title_id}/reviews/{id}/:
+    get:
+      operationId: retrieveReview
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+      tags:
+      - api
+    put:
+      operationId: updateReview
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Review'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+      tags:
+      - api
+    patch:
+      operationId: partialUpdateReview
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Review'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Review'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Review'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+      tags:
+      - api
+    delete:
+      operationId: destroyReview
+      description: ''
+      parameters:
+      - name: title_id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: id
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
+  /api/v1/auth/signup/:
+    post:
+      operationId: createsign_up_view
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+          application/x-www-form-urlencoded:
+            schema: {}
+          multipart/form-data:
+            schema: {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: ''
+      tags:
+      - api
+  /api/v1/auth/token/:
+    post:
+      operationId: createsign_up_confirmation_view
+      description: ''
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+          application/x-www-form-urlencoded:
+            schema: {}
+          multipart/form-data:
+            schema: {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: ''
+      tags:
+      - api
+  /api/v1/categories/{slug}/:
+    delete:
+      operationId: destroyCategory
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0438\u0438 \u0438\u0437 \u043C\
+        \u043E\u0434\u0435\u043B\u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
+  /api/v1/genres/{slug}/:
+    delete:
+      operationId: destroyGenre
+      description: "\u041F\u043E\u043B\u0443\u0447\u0438\u0442\u044C \u0432\u0441\u0435\
+        \ \u0436\u0430\u043D\u0440\u044B \u0438\u0437 \u043C\u043E\u0434\u0435\u043B\
+        \u0438\n\u0434\u043E\u0441\u0442\u0443\u043F:"
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        description: ''
+        schema:
+          type: string
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      responses:
+        '204':
+          description: ''
+      tags:
+      - api
 components:
   schemas:
-
     User:
-      title: Пользователь
       type: object
-      description: Детальная информация о пользователе
-      required:
-          - username
-          - email
       properties:
         username:
           type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+\z
+          description: "\u0418\u043C\u044F \u043F\u043E\u043B\u044C\u0437\u043E\u0432\
+            \u0430\u0442\u0435\u043B\u044F"
           maxLength: 150
         email:
           type: string
           format: email
+          description: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 email"
           maxLength: 254
         first_name:
           type: string
+          description: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043C\u044F"
           maxLength: 150
         last_name:
           type: string
+          description: "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0444\u0430\u043C\
+            \u0438\u043B\u0438\u044E"
           maxLength: 150
         bio:
           type: string
-        role:
-          type: string
-          description: Администратор, модератор или пользователь. По умолчанию `user`.
-          enum:
-            - user
-            - moderator
-            - admin
-
-    Title:
-      title: Объект
-      type: object
-      required:
-        - name
-      properties:
-        id:
-          type: integer
-          title: ID произведения
-          readOnly: true
-        name:
-          type: string
-          title: Название
-        year:
-          type: integer
-          title: Год выпуска
-        rating:
-          type: integer
-          readOnly: True
-          title: Рейтинг на основе отзывов, если отзывов нет — `None`
-        description:
-          type: string
-          title: Описание
-        genre:
-          type: array
-          items:
-            $ref: '#/components/schemas/Genre'
-        category:
-          $ref: '#/components/schemas/Category'
-
-    TitleCreate:
-      title: Объект для изменения
-      type: object
-      required:
-        - name
-        - year
-        - genre
-        - category
-      properties:
-        name:
-          type: string
-          title: Название
-        year:
-          type: integer
-          title: Год выпуска
-        description:
-          type: string
-          title: Описание
-        genre:
-          type: array
-          items:
-            type: string
-            title: Slug жанра
-        category:
-          type: string
-          title: Slug категории
-
-    Genre:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 256
-        slug:
-          type: string
-          maxLength: 50
-          pattern: ^[-a-zA-Z0-9_]+$
-      required:
-      - name
-      - slug
-
-    Review:
-      title: Отзыв
-      type: object
-      description: Детальная информация отзыва
-      required:
-          - text
-          - score
-      properties:
-        id:
-          type: integer
-          title: ID  отзыва
-          readOnly: true
-        text:
-          type: string
-          title: Текст отзыва
-        author:
-          type: string
-          title: username пользователя
-          readOnly: true
-        score:
-          type: integer
-          title: Оценка
-          minimum: 1
-          maximum: 10
-        pub_date:
-          type: string
-          format: date-time
-          title: Дата публикации отзыва
-          readOnly: true
-
-    ValidationError:
-      title: Ошибка валидации
-      type: object
-      properties:
-        field_name:
-          type: array
-          items:
-            type: string
-
-    Token:
-      title: Токен
-      type: object
-      properties:
-        token:
-          type: string
-          title: access токен
-
-    Comment:
-      title: Комментарий
-      type: object
-      description: Детальная информация комментария
-      required:
-        - text
-      properties:
-        id:
-          type: integer
-          title: ID  комментария
-          readOnly: true
-        text:
-          type: string
-          title: Текст комментария
-        author:
-          type: string
-          title: username автора комментария
-          readOnly: true
-        pub_date:
-          type: string
-          format: date-time
-          title: Дата публикации комментария
-          readOnly: true
-
-    Me:
-      type: object
-      properties:
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+\z
-          maxLength: 150
+          description: "\u041E \u0441\u0435\u0431\u0435"
         role:
           enum:
-          - admin
-          - moderator
           - user
+          - moderator
+          - admin
           type: string
-          readOnly: true
-        email:
-          type: string
-          format: email
-          maxLength: 254
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-        bio:
-          type: string
+          description: "\u0420\u043E\u043B\u044C \u043F\u043E\u043B\u044C\u0437\u043E\
+            \u0432\u0430\u0442\u0435\u043B\u044F \u0432 \u0441\u0438\u0441\u0442\u0435\
+            \u043C\u0435"
       required:
       - username
       - email
-
-    Category:
+    Categories:
       type: object
       properties:
         name:
@@ -1254,10 +1209,141 @@ components:
       required:
       - name
       - slug
-
-  securitySchemes:
-    jwt-token:
-      type: apiKey
-      description: Используется аутентификация с использованием JWT-токенов
-      name: Bearer
-      in: header
+    Genres:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 256
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - name
+      - slug
+    ReadTitles:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        rating:
+          type: integer
+          readOnly: true
+        description:
+          type: string
+          nullable: true
+          maxLength: 255
+        genre:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                maxLength: 256
+              slug:
+                type: string
+                maxLength: 50
+                pattern: ^[-a-zA-Z0-9_]+$
+            required:
+            - name
+            - slug
+          readOnly: true
+        category:
+          type: object
+          properties:
+            name:
+              type: string
+              maxLength: 256
+            slug:
+              type: string
+              maxLength: 50
+              pattern: ^[-a-zA-Z0-9_]+$
+          required:
+          - name
+          - slug
+          readOnly: true
+      required:
+      - name
+      - year
+    Comment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        text:
+          type: string
+        author:
+          type: string
+          readOnly: true
+        review:
+          type: string
+          readOnly: true
+        pub_date:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - text
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        text:
+          type: string
+        author:
+          type: string
+          readOnly: true
+        score:
+          type: integer
+          maximum: 10
+          minimum: 1
+        pub_date:
+          type: string
+          format: date-time
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+      required:
+      - text
+    RecordTitles:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        year:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483648
+        description:
+          type: string
+          nullable: true
+          maxLength: 255
+        genre:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+      required:
+      - name
+      - year
+      - genre
+      - category
